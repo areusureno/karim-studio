@@ -1,106 +1,689 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowDownRight, ArrowLeft, ArrowRight, ArrowUpRight, Check, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, CircleHelp, Copy, Heart, LayoutGrid, List, Menu, Minus, Plus, Search, Send, Shuffle, ShoppingBag, Sparkles, X } from 'lucide-react';
-import { config, type Artwork, type Currency, type Language, type Service } from './data/content';
-import ArtPlaceholder from './components/ArtPlaceholder';
+import { ArrowRight, ArrowUpRight, CheckCircle2, Send } from 'lucide-react';
+import {
+  config,
+  type Language,
+  type PortfolioCase,
+  type Service,
+} from './data/content';
+import CaseLightbox from './components/CaseLightbox';
+import CaseMedia from './components/CaseMedia';
+import CaseRow from './components/CaseRow';
+import LiveClock from './components/LiveClock';
+import ServiceIcon from './components/ServiceIcon';
+import SurfaceCard, { applySpotlight, springTransition } from './components/SurfaceCard';
 import logo from './assets/k-logo.png';
-import { haptic, initializeTelegram, openTelegramLink } from './utils/telegram';
+import {
+  haptic,
+  initializeTelegram,
+  openTelegramLink,
+  syncTelegramBackButton,
+} from './utils/telegram';
 
-type Tab = 'home'|'services'|'portfolio'|'contact';
-type Cart = Record<string,number>;
-const spring = { type:'spring' as const, stiffness:360, damping:28 };
-const navIcons = ['⌂','✳','▧','↗'];
+type Tab = 'home' | 'services' | 'portfolio' | 'contact';
+type LightboxState = { itemCase: PortfolioCase; index: number } | null;
 
-function App() {
-  const [lang,setLang] = useState<Language>('ru');
-  const [currency,setCurrency] = useState<Currency>('USD');
-  const [tab,setTab] = useState<Tab>('home');
-  const [cart,setCart] = useState<Cart>({});
-  const [cartOpen,setCartOpen] = useState(false);
-  const [rush,setRush] = useState(false);
-  const [comment,setComment] = useState('');
-  const [favorites,setFavorites] = useState<string[]>(()=>{try{return JSON.parse(localStorage.getItem('karim-favorites')||'[]')}catch{return []}});
-  const [selected,setSelected] = useState<Artwork|null>(null);
-  const [filter,setFilter] = useState('all');
-  const [search,setSearch] = useState('');
-  const [view,setView] = useState<'grid'|'large'|'list'>('grid');
-  const [order,setOrder] = useState(config.portfolio);
-  const [toast,setToast] = useState('');
-  const [time,setTime] = useState('');
-  const [openBenefit,setOpenBenefit] = useState(0);
-  const [carousel,setCarousel] = useState(0);
-  const t = config.interface[lang];
-  const micro = lang==='ru'
-    ? { practice:'ДИЗАЙН-ПРАКТИКА', visual:'ВИЗУАЛЬНАЯ АЙДЕНТИКА', scroll:'ПРОКРУТИТЕ ДАЛЬШЕ', identity:'АЙДЕНТИКА', latest:'ПОРТФОЛИО / 2024—26', practiceTitle:'ПРАКТИКА / 001', process:'ПОНЯТНЫЙ ПРОЦЕСС / 04 ЭТАПА', services:'УСЛУГИ / 01', projects:'ПОРТФОЛИО / 2024—26', social:'СОЦСЕТИ', contact:'НА СВЯЗИ / 03', order:'ЗАКАЗ', intention:'СОЗДАНО С МЫСЛЬЮ', next:'СЛЕДУЮЩИЙ ЭТАП' }
-    : { practice:'INDEPENDENT DESIGN PRACTICE', visual:'VISUAL IDENTITY', scroll:'SCROLL TO EXPLORE', identity:'IDENTITY', latest:'PORTFOLIO / 2024—26', practiceTitle:'THE PRACTICE / 001', process:'A CLEAR PROCESS / 04 STEPS', services:'SERVICES / 01', projects:'SELECTED PROJECTS / 2024—26', social:'SOCIAL', contact:"LET'S TALK / 03", order:'ORDER', intention:'DESIGNED WITH INTENTION', next:'THE NEXT CHAPTER' };
-  const services = config.services;
-  const count = Object.values(cart).reduce((a,b)=>a+b,0);
-  const subtotal = services.reduce((sum,s)=>sum+(s.price??0)*(cart[s.id]||0),0);
-  const discountPercent = count>=10?35:count>=5?20:0;
-  const discountAmount = subtotal*discountPercent/100;
-  const rushAmount = rush?(subtotal-discountAmount)*config.rushPercent/100:0;
-  const total = subtotal-discountAmount+rushAmount;
-  const hasQuote = services.some(s=>s.price===null&&(cart[s.id]||0)>0);
+const TABS: Tab[] = ['home', 'services', 'portfolio', 'contact'];
+const NAV_ICONS = ['⌂', '✳', '▧', '↗'];
 
-  useEffect(()=>{initializeTelegram();},[]);
-  useEffect(()=>{localStorage.setItem('karim-favorites',JSON.stringify(favorites));},[favorites]);
-  useEffect(()=>{const tick=()=>setTime(new Intl.DateTimeFormat(lang==='ru'?'ru-RU':'en-US',{timeZone:config.designer.timezone,hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}).format(new Date()));tick();const timer=window.setInterval(tick,1000);return()=>clearInterval(timer)},[lang]);
-  useEffect(()=>{if(!toast)return;const id=window.setTimeout(()=>setToast(''),2500);return()=>clearTimeout(id)},[toast]);
-  useEffect(()=>{document.documentElement.lang=lang;document.title=lang==='ru'?'Karim Studio — оформление для проектов':'Karim Studio — design for projects';},[lang]);
-
-  const money=(amount:number)=>{const rate=config.currency.rates[currency],round=config.currency.rounding[currency];const converted=currency==='USD'?amount:Math.round((amount*rate)/round)*round;const formatted=new Intl.NumberFormat(lang==='ru'?'ru-RU':'en-US',{maximumFractionDigits:0}).format(converted);return currency==='USD'?`${config.currency.symbols[currency]}${formatted}`:`${formatted} ${config.currency.symbols[currency]}`};
-  const servicePrice=(s:Service)=>s.price===null?t.quote:s.id==='avatar'?`${money(20)}–${money(25)}`:s.id==='miniapp'?`${money(20)}–${money(50)}`:money(s.price);
-  const changeQty=(id:string,delta:number)=>{haptic();setCart(prev=>{const next={...prev},qty=(next[id]||0)+delta;if(qty<=0)delete next[id];else next[id]=qty;return next})};
-  const go=(destination:Tab)=>{haptic();setTab(destination);setCartOpen(false);window.scrollTo({top:0,behavior:'smooth'})};
-  const toggleFavorite=(id:string)=>{haptic();const has=favorites.includes(id);setFavorites(curr=>has?curr.filter(x=>x!==id):[...curr,id]);setToast(has?t.removed:t.added)};
-  const openContact=(url:string,username?:string)=>{haptic();if(username){try{const copied=navigator.clipboard?.writeText(username);if(copied)copied.then(()=>setToast(t.copied)).catch(()=>setToast(t.opened));else setToast(t.opened)}catch{setToast(t.opened)}}openTelegramLink(url);};
-  const orderText=()=>{
-    const lines=services.filter(s=>cart[s.id]).map(s=>`• ${s.title[lang]} × ${cart[s.id]}${s.price===null?' — '+t.quote:` — ${money((s.price||0)*cart[s.id])}`}`);
-    return lang==='ru'?`Здравствуйте! Хочу оформить заказ.\n\n${lines.join('\n')}\n\nСумма: ${money(subtotal)}${discountPercent?`\nСкидка за объём: −${discountPercent}% (−${money(discountAmount)})`:''}${rush?`\nСрочность: +${money(rushAmount)}`:''}\nИтого: ${money(total)}${hasQuote?'\n+ позиции по договорённости в ЛС':''}\n\nКомментарий: ${comment||'—'}`:`Hello! I’d like to place an order.\n\n${lines.join('\n')}\n\nSubtotal: ${money(subtotal)}${discountPercent?`\nVolume discount: −${discountPercent}% (−${money(discountAmount)})`:''}${rush?`\nRush fee: +${money(rushAmount)}`:''}\nTotal: ${money(total)}${hasQuote?'\n+ custom items to be quoted in DMs':''}\n\nNote: ${comment||'—'}`;
-  };
-  const checkout=async()=>{const text=orderText();try{await navigator.clipboard.writeText(text);setToast(lang==='ru'?'Заявка скопирована':'Order copied');}catch{setToast(lang==='ru'?'Открываю заявку':'Opening order');}openTelegramLink(`${config.designer.telegramUrl}?text=${encodeURIComponent(text)}`)};
-  const openSimilar=(art:Artwork)=>{const id=art.category==='banner'?'banner':art.category==='art'?'art':'avatar';changeQty(id,1);setSelected(null);setCartOpen(true)};
-  const allPortfolio=order;
-  const filtered=useMemo(()=>allPortfolio.filter(a=>(filter==='all'||(filter==='favorites'?favorites.includes(a.id):a.category===filter))&&a.title.toLowerCase().includes(search.toLowerCase())),[allPortfolio,filter,favorites,search]);
-  const recent=[...config.portfolio].slice(0,3);
-  const spotlight=(e:React.MouseEvent<HTMLElement>)=>{const r=e.currentTarget.getBoundingClientRect();e.currentTarget.style.setProperty('--mx',`${e.clientX-r.left}px`);e.currentTarget.style.setProperty('--my',`${e.clientY-r.top}px`)};
-  const toggleTab=(next:Tab)=>go(next);
-
-  const Card=({children,className=''}:{children:React.ReactNode;className?:string})=><motion.div onMouseMove={spotlight} whileTap={{scale:.985}} transition={spring} className={`surface spotlight ${className}`}>{children}</motion.div>;
-  const pillNav=(mobile=false)=><nav className={mobile?'dock':'desktop-nav'} aria-label={lang==='ru'?'Основная навигация':'Main navigation'}>{(['home','services','portfolio','contact'] as Tab[]).map((name,i)=><button key={name} className={`nav-item ${tab===name?'active':''}`} onClick={()=>toggleTab(name)}><span className="nav-glyph">{navIcons[i]}</span><span>{t.nav[i]}</span></button>)}</nav>;
-  const Header=()=> <header className="topbar"><button className="brand" onClick={()=>go('home')} aria-label="Karim Studio home"><span className="brand-symbol"><img src={logo} alt=""/></span><span className="brand-word">KARIM<span>STUDIO</span></span></button>{pillNav()}<div className="top-controls"><div className="segmented lang-switch"><button className={lang==='ru'?'selected':''} onClick={()=>{haptic();setLang('ru')}}>RU</button><i>/</i><button className={lang==='en'?'selected':''} onClick={()=>{haptic();setLang('en')}}>EN</button></div><select className="currency-select" aria-label={lang==='ru'?'Валюта':'Currency'} value={currency} onChange={e=>setCurrency(e.target.value as Currency)}>{(['USD','RUB','KZT'] as Currency[]).map(c=><option key={c} value={c}>{c}</option>)}</select><button className="order-button" onClick={()=>{haptic();setCartOpen(true)}}><ShoppingBag size={15}/><span>{t.cart} {count}</span></button></div></header>;
-
-  const ProjectCard=({art,small=false}: {art:Artwork;small?:boolean})=><motion.button whileHover={{y:-4}} transition={spring} className={`project-card ${small?'project-small':''}`} onClick={()=>{haptic();setSelected(art)}}><ArtPlaceholder title={art.title} style={art.style} compact={small}/><span className="project-meta"><b>{art.title}</b><span>{art.category==='avatar'?t.avatars:art.category==='banner'?t.banners:t.arts} <i>·</i> {art.size}</span></span></motion.button>;
-
-  const renderHome=()=> <>
-    <section className="hero-bento">
-      <Card className="hero-card"><div className="hero-top"><span className="status"><i/> {t.open}</span><span className="designer-pill"><span className="designer-avatar"><img src={logo} alt=""/></span><span>{config.designer.handle}</span><b>{t.designer}</b></span></div><div className="hero-copy"><div className="eyebrow">{micro.practice}</div><h1>{t.hero}</h1><p>{t.heroSub}</p><div className="hero-actions"><button className="btn btn-light" onClick={()=>go('services')}>{t.choose}<ArrowRight size={17}/></button><button className="btn btn-glass" onClick={()=>go('portfolio')}>{t.works}</button><button className="btn btn-link" onClick={()=>openContact(config.designer.telegramUrl,config.designer.handle)}>{t.message}<ArrowUpRight size={15}/></button></div></div><div className="hero-foot"><span>01—04 <i> / </i> {micro.visual}</span><span>{micro.scroll} <ArrowDownRight size={13}/></span></div></Card>
-      <Card className="feature-card"><div className="card-label"><span>{t.featured}</span><button className="icon-button" aria-label={t.works} onClick={()=>setSelected(config.portfolio[0])}><ArrowUpRight size={17}/></button></div><button className="feature-art" onClick={()=>setSelected(config.portfolio[0])}><ArtPlaceholder title={config.portfolio[0].title} style={config.portfolio[0].style}/><span className="feature-open"><ArrowUpRight size={17}/></span></button><div className="feature-meta"><b>{config.portfolio[0].title}</b><span>{micro.identity} / 2026</span></div></Card>
-      <Card className="clock-card"><span className="card-label">{t.myTime} <span>{config.designer.utcLabel}</span></span><strong className="clock-time">{time||'00:00:00'}</strong><div className="clock-bottom"><span><i className="slot-dot"/> {t.slots}</span><b>{t.slotsValue}</b></div><div className="slot-line"><i/></div></Card>
-    </section>
-    <section className="section-block latest-section"><div className="section-head"><div><span className="eyebrow">{micro.latest}</span><h2>{t.latest}</h2></div><div className="section-tools"><span className="slide-count">0{carousel+1} <i>/ 03</i></span><button className="icon-button" onClick={()=>setCarousel((carousel+2)%3)} aria-label={lang==='ru'?'Назад':'Previous'}><ChevronLeft/></button><button className="icon-button" onClick={()=>setCarousel((carousel+1)%3)} aria-label={lang==='ru'?'Далее':'Next'}><ChevronRight/></button><button className="text-link" onClick={()=>go('portfolio')}>{t.allWorks}<ArrowRight size={15}/></button></div></div><div className="recent-grid">{[0,1,2].map((n)=><ProjectCard key={recent[(carousel+n)%3].id} art={recent[(carousel+n)%3]}/>)}</div></section>
-    <section className="section-block benefits-section"><div className="section-head"><div><span className="eyebrow">{micro.practiceTitle}</span><h2>{t.benefits}</h2></div></div><div className="benefit-list">{[{title:t.experience,body:lang==='ru'?'Каждый проект проходит понятный путь — от точного брифа до аккуратной передачи исходников.':'Every project follows a clear path, from a thoughtful brief to polished handoff.'},{title:t.orders,body:lang==='ru'?'Накопленный опыт помогает быстро найти нужное направление и спокойно довести детали до финала.':'Experience helps find the right direction quickly and resolve details with confidence.'},{title:t.formats,body:lang==='ru'?'Адаптирую концепцию под Telegram, соцсети, рекламные форматы и цифровые продукты.':'I adapt each concept for Telegram, social platforms, campaigns and digital products.'}].map((x,i)=><div className={`benefit-row ${openBenefit===i?'expanded':''}`} key={x.title}><button className="benefit-trigger" onClick={()=>setOpenBenefit(openBenefit===i?-1:i)}><span className="benefit-number">0{i+1}</span><b>{x.title}</b><span className="benefit-expand">{openBenefit===i?'×':'+'}</span></button><AnimatePresence initial={false}>{openBenefit===i&&<motion.div className="benefit-content" initial={{height:0,opacity:0}} animate={{height:'auto',opacity:1}} exit={{height:0,opacity:0}}><p>{x.body}</p>{i===0&&<div className="process-line">{[t.process,t.draft,t.revisions,t.final].map((label,j)=><span key={label}><i><Check size={12}/></i>{label}{j<3&&<em/>}</span>)}</div>}</motion.div>}</AnimatePresence></div>)}</div></section>
-    <section className="fact-grid"><Card className="fact-card"><span>{t.time}</span><b>{t.timeSub}</b><small>01 / DELIVERY</small></Card><Card className="fact-card"><span>{t.volume}</span><b>{t.volumeSub}</b><small>02 / BUNDLE</small></Card><Card className="fact-card"><span>{t.myTime} · {config.designer.utcLabel}</span><b className="fact-clock">{time}</b><small>03 / LOCAL TIME</small></Card></section>
-    <section className="section-block steps-section"><div className="section-head"><div><span className="eyebrow">{micro.process}</span><h2>{t.steps}</h2></div></div><div className="steps-grid">{config.steps.map((step,i)=><Card className="step-card" key={step.title[lang]}><span className="step-number">0{i+1}</span><div className="step-icon">{i===0?'＋':i===1?'↔':i===2?'◈':'↗'}</div><h3>{step.title[lang]}</h3><p>{step.body[lang]}</p></Card>)}</div></section>
-    <section className="source-promo"><div className="source-orbit"><img className="source-logo" src={logo} alt=""/><i/></div><div className="source-copy"><span className="eyebrow">{t.studioTag}</span><h2>SOURCE</h2><button className="text-link" onClick={()=>openContact(config.links.source,config.designer.handle)}>{t.openSource}<ArrowRight size={15}/></button></div></section>
-    <FooterLinks onOpen={openContact} lang={lang}/>
-  </>;
-
-  const renderServices=()=> <><PageHeading eyebrow={micro.services} title={t.prices} subtitle={t.pricesSub}/><section className="discount-panel surface"><div className="discount-title"><div><span className="eyebrow">{t.discountLabel}</span><b>{count} / 10 {t.items}</b></div><span className="discount-current">{discountPercent?`−${discountPercent}%`:lang==='ru'?'Выберите услуги':'Add services'}</span></div><div className="discount-track"><div className="discount-fill" style={{width:`${Math.min(count/10,1)*100}%`}}/><i className={count>=5?'passed':''} style={{left:'50%'}}/><i className={count>=10?'passed':''} style={{left:'100%'}}/></div><div className="discount-markers"><span>0</span><span>−20% {t.from} 5 {t.items}</span><span>−35% {t.from} 10 {t.items}</span></div></section><div className="service-grid">{services.map((s,i)=><Card className="service-card" key={s.id}><div className="service-card-top"><span className="service-icon">{s.icon}</span>{s.badge&&<span className="tag">{s.badge[lang]}</span>}<span className="service-index">0{i+1}</span></div><h3>{s.title[lang]}</h3><p>{s.description[lang]}</p><div className="service-price"><b>{servicePrice(s)}</b><span>{s.priceLabel[lang]}</span></div><div className="service-actions">{(cart[s.id]||0)===0?<button className="btn btn-glass full" onClick={()=>changeQty(s.id,1)}><Plus size={16}/>{t.serviceAdd}</button>:<div className="qty-control"><button onClick={()=>changeQty(s.id,-1)} aria-label={lang==='ru'?'Уменьшить':'Decrease'}><Minus size={15}/></button><b>{cart[s.id]}</b><button onClick={()=>changeQty(s.id,1)} aria-label={lang==='ru'?'Увеличить':'Increase'}><Plus size={15}/></button></div>}</div></Card>)}</div><div className="rush-inline"><div><span className="rush-symbol">↗</span><div><b>{t.rush}</b><p>{t.rushSub}</p></div></div><button className={`switch ${rush?'on':''}`} role="switch" aria-checked={rush} onClick={()=>{haptic();setRush(!rush)}}><i/></button></div></>;
-
-  const renderPortfolio=()=> <><PageHeading eyebrow={micro.projects} title={t.portfolio} subtitle={t.portfolioSub}/><div className="portfolio-controls"><div className="filter-pills">{[['all',t.all,config.portfolio.length],['avatar',t.avatars,config.portfolio.filter(a=>a.category==='avatar').length],['banner',t.banners,config.portfolio.filter(a=>a.category==='banner').length],['art',t.arts,config.portfolio.filter(a=>a.category==='art').length],['favorites',`♥ ${t.favorites}`,favorites.length]].map(([id,label,num])=><button className={filter===id?'active':''} key={id} onClick={()=>{haptic();setFilter(id as string)}}>{label}<small>{num}</small></button>)}</div><div className="portfolio-tools"><label className="search-box"><Search size={15}/><input placeholder={t.search} value={search} onChange={e=>setSearch(e.target.value)}/>{search&&<button onClick={()=>setSearch('')}><X size={14}/></button>}</label><button className="icon-button" onClick={()=>{haptic();setOrder([...order].sort(()=>Math.random()-.5))}} title={t.shuffle}><Shuffle size={16}/></button><div className="view-toggle"><button className={view==='grid'?'active':''} onClick={()=>setView('grid')} aria-label={t.grid}><LayoutGrid size={16}/></button><button className={view==='large'?'active':''} onClick={()=>setView('large')} aria-label={t.large}><Menu size={16}/></button><button className={view==='list'?'active':''} onClick={()=>setView('list')} aria-label={t.list}><List size={16}/></button></div></div></div>{filtered.length?<div className={`portfolio-grid view-${view}`}>{filtered.map((art,i)=><motion.article key={art.id} layout className="portfolio-item"><button className="portfolio-art" onClick={()=>setSelected(art)}><ArtPlaceholder title={art.title} style={art.style}/><span className="art-open"><ArrowUpRight size={17}/></span></button><button className={`favorite-button ${favorites.includes(art.id)?'is-favorite':''}`} onClick={()=>toggleFavorite(art.id)} aria-label={t.addFavorite}><Heart size={17} fill={favorites.includes(art.id)?'currentColor':'none'}/></button><div className="portfolio-caption"><div><b>{art.title}</b><span>{art.category==='avatar'?t.avatars:art.category==='banner'?t.banners:t.arts} <i>·</i> {art.size}</span></div><span className="portfolio-num">0{i+1}</span></div></motion.article>)}</div>:<div className="empty-results"><CircleHelp size={24}/><p>{t.noResults}</p></div>}</>;
-
-  const renderContact=()=> <><PageHeading eyebrow={micro.contact} title={t.contact} subtitle={lang==='ru'?'Обсудим идею и подберём подходящий формат.':'Tell me about your idea and we’ll find the right format.'}/><div className="contact-list">{config.contacts.map((item)=><motion.button whileHover={{x:5}} transition={spring} className="contact-card surface spotlight" onMouseMove={spotlight} key={item.number} onClick={()=>openContact(item.url,item.username)}><span className="contact-no">[ {item.number} ]</span><span className="contact-icon">{item.icon}</span><span className="contact-detail"><b>{item.title[lang]}</b><small>{item.description[lang]}</small></span><span className="contact-user">{item.username}</span><ArrowUpRight className="contact-arrow" size={18}/></motion.button>)}</div><section className="coming-section"><div className="section-head"><div><span className="eyebrow">{micro.next}</span><h2>{t.soon}</h2></div><span className="tag">03 / 03</span></div><div className="coming-grid">{(t.soonPlatforms as string[]).map((platform:string,i:number)=><Card className="coming-card" key={platform}><span>0{i+1} / {micro.social}</span><b>{platform}</b><small>{t.developing}</small></Card>)}</div></section></>;
-
-
-  const navTitle=t.nav[['home','services','portfolio','contact'].indexOf(tab)];
-  return <div className="app-shell"><div className="ambient ambient-one"/><div className="ambient ambient-two"/><Header/><main className="page-wrap"><AnimatePresence mode="wait"><motion.div key={tab} className="page-content" initial={{opacity:0,y:9}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-6}} transition={{duration:.22}}>{tab==='home'?renderHome():tab==='services'?renderServices():tab==='portfolio'?renderPortfolio():renderContact()}</motion.div></AnimatePresence><footer className="site-footer"><span>© KARIM STUDIO — 2026</span><span>{navTitle} / {config.designer.utcLabel}</span><span>{micro.intention} <Sparkles size={12}/></span></footer></main>{pillNav(true)}
-    <AnimatePresence>{cartOpen&&<><motion.div className="scrim" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} onClick={()=>setCartOpen(false)}/><motion.aside className="sheet cart-sheet" initial={{y:'100%',opacity:.8}} animate={{y:0,opacity:1}} exit={{y:'100%',opacity:.8}} transition={spring} role="dialog" aria-modal="true" aria-label={t.cart}><div className="sheet-handle"/><div className="sheet-head"><div><span className="eyebrow">{micro.order} / {String(count).padStart(2,'0')}</span><h2>{t.cart} {count}</h2></div><button className="icon-button" onClick={()=>setCartOpen(false)} aria-label={t.close}><X size={19}/></button></div>{count===0?<div className="cart-empty"><div className="empty-icon"><ShoppingBag size={25}/></div><h3>{t.empty}</h3><p>{t.emptySub}</p><button className="btn btn-light" onClick={()=>go('services')}>{t.choose}<ArrowRight size={16}/></button></div>:<><div className="cart-items">{services.filter(s=>cart[s.id]).map(s=><div className="cart-item" key={s.id}><div className="cart-item-icon">{s.icon}</div><div className="cart-item-name"><b>{s.title[lang]}</b><small>{servicePrice(s)} · {s.price===null?t.quote:t.perItem}</small></div><div className="qty-control compact"><button onClick={()=>changeQty(s.id,-1)} aria-label={lang==='ru'?'Уменьшить':'Decrease'}><Minus size={13}/></button><b>{cart[s.id]}</b><button onClick={()=>changeQty(s.id,1)} aria-label={lang==='ru'?'Увеличить':'Increase'}><Plus size={13}/></button></div><button className="remove-item" onClick={()=>setCart(prev=>{const next={...prev};delete next[s.id];return next})} aria-label={lang==='ru'?'Удалить':'Remove'}><X size={14}/></button></div>)}</div><label className="rush-option"><span><b>{t.rush}</b><small>{t.rushSub}</small></span><button className={`switch ${rush?'on':''}`} role="switch" aria-checked={rush} onClick={()=>setRush(!rush)}><i/></button></label><label className="comment-field"><span>{t.comment}</span><textarea value={comment} onChange={e=>setComment(e.target.value)} placeholder={t.commentPlaceholder}/></label><div className="cart-summary"><div><span>{t.subtotal}</span><b>{money(subtotal)}</b></div>{discountPercent>0&&<div className="discount-total"><span>{t.discount} · −{discountPercent}%</span><b>−{money(discountAmount)}</b></div>}{rush&&<div><span>{t.surcharge} · +{config.rushPercent}%</span><b>+{money(rushAmount)}</b></div>}{hasQuote&&<small className="quote-note">{t.custom}</small>}<div className="grand-total"><span>{t.total}</span><b>{money(total)}</b></div></div><button className="btn btn-light checkout-button" onClick={checkout}>{t.order}<Send size={16}/></button><p className="checkout-note">{lang==='ru'?'Текст заявки скопируется, Telegram откроется автоматически.':'The order text is copied and Telegram opens automatically.'}</p></>}</motion.aside></>}</AnimatePresence>
-    <AnimatePresence>{selected&&<><motion.div className="scrim" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} onClick={()=>setSelected(null)}/><motion.div className="sheet detail-sheet" initial={{y:'100%',opacity:.8}} animate={{y:0,opacity:1}} exit={{y:'100%',opacity:.8}} transition={spring} role="dialog" aria-modal="true"><button className="detail-close icon-button" onClick={()=>setSelected(null)} aria-label={t.close}><X size={18}/></button><div className="detail-art"><ArtPlaceholder title={selected.title} style={selected.style}/></div><div className="detail-info"><span className="eyebrow">{t.work} / {selected.size}</span><h2>{selected.title}</h2><div className="detail-tags">{selected.tags.map(tag=><span key={tag}>{tag}</span>)}</div><div className="detail-actions"><button className="btn btn-glass" onClick={()=>toggleFavorite(selected.id)}><Heart size={16} fill={favorites.includes(selected.id)?'currentColor':'none'}/>{favorites.includes(selected.id)?t.favorites:t.addFavorite}</button><button className="btn btn-light" onClick={()=>openSimilar(selected)}>{t.similar}<ArrowRight size={16}/></button></div></div></motion.div></>}</AnimatePresence>
-    <AnimatePresence>{toast&&<motion.div className="toast" initial={{opacity:0,y:12}} animate={{opacity:1,y:0}} exit={{opacity:0,y:10}}><CheckCircle2 size={16}/>{toast}</motion.div>}</AnimatePresence>
-  </div>;
+function parseTabFromHash(): Tab {
+  if (typeof window === 'undefined') return 'home';
+  const raw = window.location.hash.replace(/^#/, '') as Tab;
+  return TABS.includes(raw) ? raw : 'home';
 }
 
-function PageHeading({eyebrow,title,subtitle}:{eyebrow:string;title:string;subtitle:string}){return <header className="page-heading"><span className="eyebrow">{eyebrow}</span><h1>{title}</h1><p>{subtitle}</p></header>}
-function FooterLinks({onOpen,lang}:{onOpen:(url:string,username?:string)=>void;lang:Language}){return <div className="footer-links"><button onClick={()=>onOpen(config.designer.telegramUrl,config.designer.handle)}>{config.designer.handle}<ArrowUpRight size={13}/></button><button onClick={()=>onOpen(config.links.channel,config.links.channelHandle)}>{lang==='ru'?'КАНАЛ':'CHANNEL'}<ArrowUpRight size={13}/></button><button onClick={()=>onOpen(config.links.source,config.designer.handle)}>SOURCE<ArrowUpRight size={13}/></button></div>}
+function loadSavedLang(): Language {
+  try {
+    const saved = localStorage.getItem('karim-lang');
+    if (saved === 'ru' || saved === 'en') return saved;
+  } catch {
+    /* ignore storage errors */
+  }
+  return 'ru';
+}
+
+function formatWorkCount(n: number, lang: Language): string {
+  if (lang === 'en') return n === 1 ? '1 item' : `${n} items`;
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  if (mod10 === 1 && mod100 !== 11) return `${n} работа`;
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return `${n} работы`;
+  return `${n} работ`;
+}
+
+type HeaderProps = {
+  lang: Language;
+  tab: Tab;
+  navLabels: string[];
+  onGo: (tab: Tab) => void;
+  onLangChange: (lang: Language) => void;
+};
+
+function TopHeader({ lang, tab, navLabels, onGo, onLangChange }: HeaderProps) {
+  return (
+    <header className="topbar">
+      <button
+        type="button"
+        className="brand"
+        onClick={() => onGo('home')}
+        aria-label="Karim Studio home"
+      >
+        <span className="brand-symbol">
+          <img src={logo} alt="" />
+        </span>
+        <span className="brand-word">
+          KARIM<span>STUDIO</span>
+        </span>
+      </button>
+
+      <nav
+        className="desktop-nav"
+        aria-label={lang === 'ru' ? 'Основная навигация' : 'Main navigation'}
+      >
+        {TABS.map((name, i) => (
+          <button
+            type="button"
+            key={name}
+            className={`nav-item ${tab === name ? 'active' : ''}`}
+            onClick={() => onGo(name)}
+          >
+            <span className="nav-glyph">{NAV_ICONS[i]}</span>
+            <span>{navLabels[i]}</span>
+          </button>
+        ))}
+      </nav>
+
+      <div className="top-controls">
+        <div className="segmented lang-switch">
+          <button
+            type="button"
+            className={lang === 'ru' ? 'selected' : ''}
+            onClick={() => onLangChange('ru')}
+          >
+            RU
+          </button>
+          <i>/</i>
+          <button
+            type="button"
+            className={lang === 'en' ? 'selected' : ''}
+            onClick={() => onLangChange('en')}
+          >
+            EN
+          </button>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+type MobileDockProps = {
+  lang: Language;
+  tab: Tab;
+  navLabels: string[];
+  onGo: (tab: Tab) => void;
+};
+
+function MobileDock({ lang, tab, navLabels, onGo }: MobileDockProps) {
+  return (
+    <nav
+      className="dock"
+      aria-label={lang === 'ru' ? 'Мобильная навигация' : 'Mobile navigation'}
+    >
+      {TABS.map((name, i) => (
+        <button
+          type="button"
+          key={name}
+          className={`nav-item ${tab === name ? 'active' : ''}`}
+          onClick={() => onGo(name)}
+        >
+          <span className="nav-glyph">{NAV_ICONS[i]}</span>
+          <span>{navLabels[i]}</span>
+        </button>
+      ))}
+    </nav>
+  );
+}
+
+function PageHeading({
+  eyebrow,
+  title,
+  subtitle,
+}: {
+  eyebrow: string;
+  title: string;
+  subtitle: string;
+}) {
+  return (
+    <header className="page-heading">
+      <span className="eyebrow">{eyebrow}</span>
+      <h1>{title}</h1>
+      <p>{subtitle}</p>
+    </header>
+  );
+}
+
+function FooterLinks({
+  onConsult,
+  onOpenLink,
+  lang,
+}: {
+  onConsult: () => void;
+  onOpenLink: (url: string, copyText?: string) => void;
+  lang: Language;
+}) {
+  return (
+    <div className="footer-links">
+      <button type="button" onClick={onConsult}>
+        {config.manager.handle}
+        <ArrowUpRight size={13} />
+      </button>
+      <button
+        type="button"
+        onClick={() => onOpenLink(config.links.channel, config.links.channelHandle)}
+      >
+        {lang === 'ru' ? 'КАНАЛ' : 'CHANNEL'}
+        <ArrowUpRight size={13} />
+      </button>
+      <button type="button" onClick={() => onOpenLink(config.links.community)}>
+        KARIM COMMUNITY
+        <ArrowUpRight size={13} />
+      </button>
+    </div>
+  );
+}
+
+function App() {
+  const [lang, setLang] = useState<Language>(loadSavedLang);
+  const [tab, setTab] = useState<Tab>(parseTabFromHash);
+  const [lightbox, setLightbox] = useState<LightboxState>(null);
+  const [toast, setToast] = useState('');
+
+  const t = config.interface[lang];
+  const micro =
+    lang === 'ru'
+      ? {
+          practice: 'ДИЗАЙН-ПРАКТИКА',
+          latest: 'ПОРТФОЛИО KARIM STUDIO',
+          services: 'УСЛУГИ / 05',
+          projects: 'ИЗБРАННЫЕ КЕЙСЫ / KARIM STUDIO',
+          contact: 'ПРЯМАЯ СВЯЗЬ / 03',
+        }
+      : {
+          practice: 'INDEPENDENT DESIGN PRACTICE',
+          latest: 'KARIM STUDIO PORTFOLIO',
+          services: 'SERVICES / 05',
+          projects: 'SELECTED CASES / KARIM STUDIO',
+          contact: 'DIRECT CHANNELS / 03',
+        };
+
+  const services = config.services;
+  const cases = config.cases;
+  const featuredCase = cases.find((c) => c.featured) ?? cases[0];
+  const featuredHeroMedia = featuredCase.items[0];
+
+  useEffect(() => {
+    initializeTelegram();
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('karim-lang', lang);
+    } catch {
+      /* ignore */
+    }
+    document.documentElement.lang = lang;
+    document.title =
+      lang === 'ru'
+        ? 'Karim Studio — фирменный стиль и дизайн проектов'
+        : 'Karim Studio — brand identity & design for projects';
+  }, [lang]);
+
+  useEffect(() => {
+    if (!toast) return;
+    const id = window.setTimeout(() => setToast(''), 2500);
+    return () => window.clearTimeout(id);
+  }, [toast]);
+
+  // Keep browser hash in sync with active tab
+  useEffect(() => {
+    const onHashChange = () => setTab(parseTabFromHash());
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
+  }, []);
+
+  // Lock page scroll while case lightbox is open
+  useEffect(() => {
+    if (!lightbox) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [lightbox]);
+
+  const go = useCallback((destination: Tab) => {
+    haptic();
+    setTab(destination);
+    setLightbox(null);
+    if (typeof window !== 'undefined') {
+      const targetHash = destination === 'home' ? '' : `#${destination}`;
+      if (window.location.hash !== targetHash) {
+        window.history.replaceState(
+          null,
+          '',
+          targetHash || window.location.pathname + window.location.search
+        );
+      }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, []);
+
+  // Native Telegram Mini App BackButton integration
+  useEffect(() => {
+    const showBack = lightbox !== null || tab !== 'home';
+    return syncTelegramBackButton(showBack, () => {
+      haptic();
+      if (lightbox) setLightbox(null);
+      else go('home');
+    });
+  }, [lightbox, tab, go]);
+
+  const openDirectTelegram = (url: string, copyText?: string) => {
+    haptic();
+    if (copyText) {
+      try {
+        const copied = navigator.clipboard?.writeText(copyText);
+        if (copied) {
+          copied.then(() => setToast(t.copied)).catch(() => setToast(t.opened));
+        } else {
+          setToast(t.opened);
+        }
+      } catch {
+        setToast(t.opened);
+      }
+    } else {
+      setToast(t.opened);
+    }
+    openTelegramLink(url);
+  };
+
+  const openTelegramWithPrompt = (baseUrl: string, prompt: string) => {
+    haptic('medium');
+    try {
+      const copied = navigator.clipboard?.writeText(prompt);
+      if (copied) {
+        copied.then(() => setToast(t.promptCopied)).catch(() => setToast(t.opened));
+      } else {
+        setToast(t.opened);
+      }
+    } catch {
+      setToast(t.opened);
+    }
+    openTelegramLink(`${baseUrl}?text=${encodeURIComponent(prompt)}`);
+  };
+
+  const openServiceConsult = (service: Service) => {
+    openTelegramWithPrompt(config.manager.telegramUrl, service.consultPrompt[lang]);
+  };
+
+  const openCaseConsult = (itemCase: PortfolioCase, itemIndex?: number) => {
+    const item =
+      typeof itemIndex === 'number' ? itemCase.items[itemIndex] : undefined;
+    const prompt =
+      lang === 'ru'
+        ? item
+          ? `Здравствуйте! Понравился кейс «${itemCase.title}» (${item.title.ru}). Хочу обсудить похожий проект и получить консультацию.`
+          : `Здравствуйте! Понравился кейс «${itemCase.title}». Хочу обсудить похожий проект и получить консультацию.`
+        : item
+          ? `Hello! I liked the "${itemCase.title}" case (${item.title.en}). I would like to discuss a similar project and get a consultation.`
+          : `Hello! I liked the "${itemCase.title}" case. I would like to discuss a similar project and get a consultation.`;
+    setLightbox(null);
+    openTelegramWithPrompt(config.manager.telegramUrl, prompt);
+  };
+
+  const openLightbox = (itemCase: PortfolioCase, index = 0) => {
+    haptic();
+    setLightbox({ itemCase, index });
+  };
+
+  const renderHome = () => (
+    <>
+      <section className="hero-bento">
+        <SurfaceCard className="hero-card">
+          <div className="hero-top">
+            <span className="designer-pill">
+              <span className="designer-avatar">
+                <img src={logo} alt="" />
+              </span>
+              <span>{config.designer.handle}</span>
+              <b>{t.designer}</b>
+            </span>
+          </div>
+
+          <div className="hero-copy">
+            <div className="eyebrow">{micro.practice}</div>
+            <h1>{t.hero}</h1>
+            <p>{t.heroSub}</p>
+            <div className="hero-actions">
+              <button type="button" className="btn btn-light" onClick={() => go('services')}>
+                {t.choose}
+                <ArrowRight size={17} />
+              </button>
+              <button type="button" className="btn btn-glass" onClick={() => go('portfolio')}>
+                {t.works}
+              </button>
+              <button
+                type="button"
+                className="btn btn-link"
+                onClick={() =>
+                  openTelegramWithPrompt(config.manager.telegramUrl, t.generalConsultPrompt)
+                }
+              >
+                {t.message}
+                <ArrowUpRight size={15} />
+              </button>
+            </div>
+          </div>
+        </SurfaceCard>
+
+        <SurfaceCard className="feature-card">
+          <div className="card-label">
+            <span>{t.featured}</span>
+            <button
+              type="button"
+              className="icon-button"
+              aria-label={t.featured}
+              onClick={() => openLightbox(featuredCase, 0)}
+            >
+              <ArrowUpRight size={17} />
+            </button>
+          </div>
+          <button
+            type="button"
+            className="feature-art"
+            onClick={() => openLightbox(featuredCase, 0)}
+          >
+            <CaseMedia
+              item={featuredHeroMedia}
+              alt={`${featuredCase.title} — ${featuredHeroMedia.title[lang]}`}
+              priority
+            />
+            <span className="feature-open" aria-hidden="true">
+              <ArrowUpRight size={17} />
+            </span>
+          </button>
+          <div className="feature-meta">
+            <b>{featuredCase.title}</b>
+            <span>{t.featuredMeta}</span>
+          </div>
+        </SurfaceCard>
+
+        <SurfaceCard className="clock-card">
+          <span className="card-label">
+            {t.myTime} <span>{config.designer.utcLabel}</span>
+          </span>
+          <LiveClock lang={lang} timezone={config.designer.timezone} />
+        </SurfaceCard>
+      </section>
+
+      <section className="section-block latest-section">
+        <div className="section-head">
+          <div>
+            <span className="eyebrow">{micro.latest}</span>
+            <h2>{t.latest}</h2>
+          </div>
+          <div className="section-tools">
+            <button type="button" className="text-link" onClick={() => go('portfolio')}>
+              {t.seeAll}
+              <ArrowRight size={15} />
+            </button>
+          </div>
+        </div>
+
+        <div className="home-cases-grid">
+          {cases.map((itemCase) => {
+            const coverIdx = itemCase.homeCoverIndex ?? 0;
+            const cover = itemCase.items[coverIdx] ?? itemCase.items[0];
+            return (
+              <motion.button
+                type="button"
+                key={itemCase.id}
+                whileHover={{ y: -4 }}
+                transition={springTransition}
+                className="home-case-card"
+                onClick={() => openLightbox(itemCase, 0)}
+              >
+                <div className="home-case-visual">
+                  <CaseMedia
+                    item={cover}
+                    alt={`${itemCase.title} — ${cover.title[lang]}`}
+                    showBadge={cover.type === 'video'}
+                  />
+                  <span className="home-case-count">
+                    {formatWorkCount(itemCase.items.length, lang)}
+                  </span>
+                  <span className="art-open" aria-hidden="true">
+                    <ArrowUpRight size={15} />
+                  </span>
+                </div>
+                <div className="project-meta">
+                  <b>{itemCase.title}</b>
+                  <span>
+                    {itemCase.number} <i>·</i> {itemCase.year}
+                  </span>
+                </div>
+                <p className="home-case-sub">{itemCase.subtitle[lang]}</p>
+              </motion.button>
+            );
+          })}
+        </div>
+
+        <div className="see-all-wrap">
+          <button
+            type="button"
+            className="btn btn-glass see-all-btn"
+            onClick={() => go('portfolio')}
+          >
+            <span>{t.seeAll}</span>
+            <ArrowRight size={16} />
+          </button>
+        </div>
+      </section>
+
+      <section className="source-promo">
+        <div className="source-orbit">
+          <img className="source-logo" src={logo} alt="" />
+          <i />
+        </div>
+        <div className="source-copy">
+          <h2>KARIM COMMUNITY</h2>
+          <button
+            type="button"
+            className="text-link"
+            onClick={() => openDirectTelegram(config.links.community)}
+          >
+            {t.joinCommunity}
+            <ArrowRight size={15} />
+          </button>
+        </div>
+      </section>
+
+      <FooterLinks
+        onConsult={() =>
+          openTelegramWithPrompt(config.manager.telegramUrl, t.generalConsultPrompt)
+        }
+        onOpenLink={openDirectTelegram}
+        lang={lang}
+      />
+    </>
+  );
+
+  const renderServices = () => (
+    <>
+      <PageHeading eyebrow={micro.services} title={t.prices} subtitle={t.pricesSub} />
+      <div className="service-grid">
+        {services.map((s, i) => (
+          <SurfaceCard className="service-card" key={s.id}>
+            <div className="service-card-top">
+              <span className="service-icon">
+                <ServiceIcon name={s.icon} />
+              </span>
+              <span className="service-index">0{i + 1}</span>
+            </div>
+            <h3>{s.title[lang]}</h3>
+            <p>{s.description[lang]}</p>
+            <div className="service-actions">
+              <button
+                type="button"
+                className="btn btn-glass full consult-btn"
+                onClick={() => openServiceConsult(s)}
+              >
+                <span>{t.consultation}</span>
+                <Send size={14} />
+              </button>
+            </div>
+          </SurfaceCard>
+        ))}
+      </div>
+    </>
+  );
+
+  const renderPortfolio = () => (
+    <>
+      <PageHeading eyebrow={micro.projects} title={t.portfolio} subtitle={t.portfolioSub} />
+      <div className="cases-stack">
+        {cases.map((itemCase) => (
+          <CaseRow
+            key={itemCase.id}
+            itemCase={itemCase}
+            lang={lang}
+            countLabel={formatWorkCount(itemCase.items.length, lang)}
+            discussLabel={t.discussCase}
+            onOpenItem={(c, idx) => openLightbox(c, idx)}
+            onDiscussCase={(c) => openCaseConsult(c)}
+          />
+        ))}
+      </div>
+    </>
+  );
+
+  const renderContact = () => (
+    <>
+      <PageHeading eyebrow={micro.contact} title={t.contact} subtitle={t.contactSub} />
+      <div className="contact-list">
+        {config.contacts.map((item) => (
+          <motion.button
+            type="button"
+            whileHover={{ x: 5 }}
+            transition={springTransition}
+            className="contact-card surface spotlight"
+            onMouseMove={applySpotlight}
+            key={item.key}
+            onClick={() => {
+              if (item.prompt) {
+                openTelegramWithPrompt(item.url, item.prompt[lang]);
+              } else {
+                openDirectTelegram(item.url, item.copyText);
+              }
+            }}
+          >
+            <span className="contact-no">[ {item.number} ]</span>
+            <span className="contact-avatar">
+              <img src={item.avatar} alt={item.title[lang]} loading="lazy" />
+            </span>
+            <span className="contact-detail">
+              <b>{item.title[lang]}</b>
+              <small>{item.description[lang]}</small>
+            </span>
+            <span className="contact-user">{item.username}</span>
+            <ArrowUpRight className="contact-arrow" size={18} />
+          </motion.button>
+        ))}
+      </div>
+    </>
+  );
+
+  const navTitle = t.nav[TABS.indexOf(tab)];
+
+  return (
+    <div className="app-shell">
+      <div className="ambient ambient-one" />
+      <div className="ambient ambient-two" />
+
+      <TopHeader
+        lang={lang}
+        tab={tab}
+        navLabels={t.nav}
+        onGo={go}
+        onLangChange={(nextLang) => {
+          haptic();
+          setLang(nextLang);
+        }}
+      />
+
+      <main className="page-wrap">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={tab}
+            className="page-content"
+            initial={{ opacity: 0, y: 9 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.22 }}
+          >
+            {tab === 'home'
+              ? renderHome()
+              : tab === 'services'
+                ? renderServices()
+                : tab === 'portfolio'
+                  ? renderPortfolio()
+                  : renderContact()}
+          </motion.div>
+        </AnimatePresence>
+
+        <footer className="site-footer">
+          <span>© KARIM STUDIO — 2026</span>
+          <span>
+            {navTitle} / {config.designer.utcLabel}
+          </span>
+        </footer>
+      </main>
+
+      <MobileDock lang={lang} tab={tab} navLabels={t.nav} onGo={go} />
+
+      <AnimatePresence>
+        {lightbox && (
+          <CaseLightbox
+            itemCase={lightbox.itemCase}
+            index={lightbox.index}
+            lang={lang}
+            similarLabel={t.similar}
+            closeLabel={t.close}
+            onChangeIndex={(nextIndex) =>
+              setLightbox((prev) => (prev ? { ...prev, index: nextIndex } : null))
+            }
+            onClose={() => setLightbox(null)}
+            onConsult={(c, idx) => openCaseConsult(c, idx)}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            className="toast"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 10 }}
+          >
+            <CheckCircle2 size={16} />
+            {toast}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 export default App;

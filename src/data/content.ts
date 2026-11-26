@@ -1,44 +1,435 @@
 /**
- * ЕДИНАЯ точка настройки проекта: меняйте здесь тексты, цены и ссылки.
- * Все цены услуг задаются в USD. Для RUB/KZT используйте курсы ниже.
+ * ЕДИНАЯ точка настройки проекта: меняйте здесь тексты, услуги, промпты, ссылки и кейсы.
  */
+import type { ServiceIconName } from '../components/ServiceIcon';
+import avatarChannelImg from '../assets/avatar-channel.jpg';
+import avatarDmImg from '../assets/avatar-dm.jpg';
+import avatarCommunityImg from '../assets/avatar-community.jpg';
+
+// Case 01 — JESS (Featured)
+import jessSupportVideo from '../assets/cases/jess/support-motion.mp4';
+import jessMascotImg from '../assets/cases/jess/mascot-pattern.jpg';
+import jessEmblemsImg from '../assets/cases/jess/emblems.jpg';
+import jessBannersImg from '../assets/cases/jess/banners-pack.jpg';
+import jessWinVideo from '../assets/cases/jess/win-motion.mp4';
+import jessDrawVideo from '../assets/cases/jess/draw-motion.mp4';
+import jessLoseVideo from '../assets/cases/jess/lose-motion.mp4';
+
+// Case 02 — BULL
+import bullFlameImg from '../assets/cases/bull/logo-flame.jpg';
+import bullMarkImg from '../assets/cases/bull/logo-mark.jpg';
+import bullMerchImg from '../assets/cases/bull/merch.jpg';
+import bullWoodImg from '../assets/cases/bull/wood-sign.jpg';
+
+// Case 03 — ALMAT BRAT
+import almatDarkImg from '../assets/cases/almat-brat/logo-dark.jpg';
+import almatLightImg from '../assets/cases/almat-brat/logo-light.jpg';
+import almatPaletteImg from '../assets/cases/almat-brat/palette.jpg';
+
 export type Language = 'ru' | 'en';
-export type Currency = 'USD' | 'RUB' | 'KZT';
-export type Service = { id: string; icon: string; title: Record<Language,string>; description: Record<Language,string>; price: number | null; priceLabel: Record<Language,string>; badge?: Record<Language,string>; category: string };
-export type Artwork = { id: string; title: string; category: 'avatar'|'banner'|'art'; size: string; tags: string[]; style: number };
+
+export type Service = {
+  id: string;
+  icon: ServiceIconName;
+  title: Record<Language, string>;
+  description: Record<Language, string>;
+  consultPrompt: Record<Language, string>;
+};
+
+export type MediaItem = {
+  id: string;
+  title: Record<Language, string>;
+  tag: Record<Language, string>;
+  type: 'image' | 'video';
+  src: string;
+  fit?: 'cover' | 'contain';
+  bg?: string;
+};
+
+export type PortfolioCase = {
+  id: string;
+  number: string;
+  title: string;
+  subtitle: Record<Language, string>;
+  year: string;
+  featured?: boolean;
+  homeCoverIndex?: number;
+  items: MediaItem[];
+};
+
+export type ContactItem = {
+  number: string;
+  key: string;
+  title: Record<Language, string>;
+  description: Record<Language, string>;
+  username: string;
+  url: string;
+  avatar: string;
+  copyText?: string;
+  prompt?: Record<Language, string>;
+};
 
 export const config = {
-  designer: { handle: '@karim_the_drea4', telegramUrl: 'https://t.me/karim_the_drea4', timezone: 'Asia/Almaty', utcLabel: 'GMT+5' },
-  links: { channel: 'https://t.me/karimdsg', channelHandle: '@karimdsg', source: 'https://t.me/karim_the_drea4', portfolio: '#portfolio' },
-  currency: { rates: { USD: 1, RUB: 90, KZT: 470 } as Record<Currency,number>, symbols: { USD: '$', RUB: '₽', KZT: '₸' } as Record<Currency,string>, rounding: { USD: 1, RUB: 50, KZT: 100 } as Record<Currency,number> },
-  discount: [{ count: 5, percent: 20 }, { count: 10, percent: 35 }],
-  rushPercent: 50,
+  designer: {
+    handle: '@karim_the_drea4',
+    telegramUrl: 'https://t.me/karim_the_drea4',
+    timezone: 'Asia/Almaty',
+    utcLabel: 'GMT+5',
+  },
+  manager: {
+    handle: '@Karim_managerr',
+    telegramUrl: 'https://t.me/Karim_managerr',
+  },
+  links: {
+    channel: 'https://t.me/karimdsg',
+    channelHandle: '@karimdsg',
+    community: 'https://t.me/Karimdsg/3375',
+    portfolio: '#portfolio',
+  },
   services: [
-    { id:'avatar', icon:'◉', title:{ru:'Аватарка',en:'Avatar'}, description:{ru:'Для канала, профиля или проекта.',en:'For a channel, profile or project.'}, price:22, priceLabel:{ru:'по сложности',en:'based on complexity'}, badge:{ru:'Хит',en:'Popular'}, category:'avatar' },
-    { id:'banner', icon:'▰', title:{ru:'Баннер',en:'Banner'}, description:{ru:'Шапки и обложки для каналов и рекламы.',en:'Headers and covers for channels and campaigns.'}, price:25, priceLabel:{ru:'по ТЗ',en:'brief dependent'}, category:'banner' },
-    { id:'art', icon:'✳', title:{ru:'Рисованный арт',en:'Illustrated art'}, description:{ru:'Авторская иллюстрация под вашу идею.',en:'Original illustration made for your idea.'}, price:50, priceLabel:{ru:'по сложности',en:'based on complexity'}, category:'art' },
-    { id:'miniapp', icon:'⌘', title:{ru:'Telegram Mini App',en:'Telegram Mini App'}, description:{ru:'Страница внутри Telegram, сделанная под вас.',en:'A custom page that lives inside Telegram.'}, price:35, priceLabel:{ru:'по задаче',en:'scope dependent'}, category:'miniapp' },
-    { id:'studio', icon:'▦', title:{ru:'Оформление студии',en:'Studio identity'}, description:{ru:'Единый стиль: аватарки, баннеры, арты.',en:'A cohesive set of avatars, banners and art.'}, price:null, priceLabel:{ru:'скидка до 35%',en:'up to 35% off'}, badge:{ru:'Выгодно',en:'Bundle'}, category:'studio' },
-    { id:'motion', icon:'✧', title:{ru:'Стикеры, эмодзи, анимации',en:'Stickers, emoji & motion'}, description:{ru:'Наборы стикеров и эмодзи, анимации.',en:'Sticker and emoji packs, plus animation.'}, price:null, priceLabel:{ru:'по задаче',en:'scope dependent'}, category:'motion' },
+    {
+      id: 'gfx',
+      icon: 'gfx',
+      title: { ru: 'GFX оформление', en: 'GFX Design' },
+      description: {
+        ru: 'Статичная графика для каналов и проектов: аватарки, баннеры, обложки и посты.',
+        en: 'Static visuals for channels and projects: avatars, banners, covers and posts.',
+      },
+      consultPrompt: {
+        ru: 'Здравствуйте! Интересует услуга «GFX оформление». Хочу получить консультацию, обсудить задачу и узнать стоимость.',
+        en: 'Hello! I am interested in GFX Design. I would like a consultation to discuss my brief and get an estimate.',
+      },
+    },
+    {
+      id: 'vfx',
+      icon: 'vfx',
+      title: { ru: 'VFX эффекты', en: 'VFX & Motion' },
+      description: {
+        ru: 'Анимации, динамичные переходы, интро, анимированные стикеры и эмодзи.',
+        en: 'Motion graphics, dynamic transitions, intros, animated stickers and emoji.',
+      },
+      consultPrompt: {
+        ru: 'Здравствуйте! Интересует услуга «VFX эффекты». Хочу получить консультацию по анимации, срокам и стоимости.',
+        en: 'Hello! I am interested in VFX & Motion. I would like a consultation on animation, timeline and pricing.',
+      },
+    },
+    {
+      id: 'turnkey',
+      icon: 'turnkey',
+      title: { ru: 'Оформление канала под ключ', en: 'Turnkey Channel Design' },
+      description: {
+        ru: 'Комплексная упаковка Telegram-канала в едином стиле: от аватара до шаблонов постов.',
+        en: 'Complete Telegram channel packaging in one cohesive style, from avatar to post templates.',
+      },
+      consultPrompt: {
+        ru: 'Здравствуйте! Интересует «Оформление канала под ключ». Хочу получить консультацию, обсудить формат канала и стоимость.',
+        en: 'Hello! I am interested in Turnkey Channel Design. I would like a consultation to discuss my channel and pricing.',
+      },
+    },
+    {
+      id: 'branding',
+      icon: 'branding',
+      title: { ru: 'Фирменный стиль / брендинг', en: 'Brand Identity / Branding' },
+      description: {
+        ru: 'Цельная визуальная система проекта: палитра, типографика, графика и единый стиль.',
+        en: 'Cohesive visual identity system: color palette, typography, graphics and visual rules.',
+      },
+      consultPrompt: {
+        ru: 'Здравствуйте! Интересует «Фирменный стиль / брендинг». Хочу получить консультацию и обсудить детали проекта.',
+        en: 'Hello! I am interested in Brand Identity / Branding. I would like a consultation to discuss my project.',
+      },
+    },
+    {
+      id: 'logo',
+      icon: 'logo',
+      title: { ru: 'Разработка фирменного логотипа', en: 'Custom Logo Design' },
+      description: {
+        ru: 'Уникальный фирменный знак и шрифтовая композиция с адаптацией под любые форматы.',
+        en: 'Original brand mark and wordmark adapted across digital and print formats.',
+      },
+      consultPrompt: {
+        ru: 'Здравствуйте! Интересует «Разработка фирменного логотипа». Хочу получить консультацию по концепции, срокам и стоимости.',
+        en: 'Hello! I am interested in Custom Logo Design. I would like a consultation on concept, timeline and pricing.',
+      },
+    },
   ] as Service[],
-  portfolio: [
-    {id:'1',title:'#1',category:'avatar',size:'600×600',tags:['identity','dark'],style:1},
-    {id:'2',title:'#2',category:'art',size:'750×1600',tags:['illustration','editorial'],style:2},
-    {id:'3',title:'#3',category:'banner',size:'1920×640',tags:['branding','studio'],style:3},
-  ] as Artwork[],
+  cases: [
+    {
+      id: 'jess',
+      number: '01',
+      title: 'JESS',
+      subtitle: {
+        ru: 'Персонаж, фирменная графика, обложки и VFX-анимации',
+        en: 'Mascot character, brand graphics, covers & VFX motion',
+      },
+      year: '2026',
+      featured: true,
+      homeCoverIndex: 1,
+      items: [
+        {
+          id: 'jess-support',
+          title: { ru: 'JESS Support', en: 'JESS Support' },
+          tag: { ru: 'VFX / Анимация', en: 'VFX / Motion' },
+          type: 'video',
+          src: jessSupportVideo,
+          fit: 'contain',
+          bg: '#05060b',
+        },
+        {
+          id: 'jess-mascot',
+          title: { ru: 'Персонаж и паттерн', en: 'Mascot & Pattern' },
+          tag: { ru: 'Айдентика', en: 'Identity' },
+          type: 'image',
+          src: jessMascotImg,
+          fit: 'cover',
+          bg: '#131731',
+        },
+        {
+          id: 'jess-emblems',
+          title: { ru: 'Эмблемы и фишка', en: 'Emblems & Chip' },
+          tag: { ru: 'Логотипы', en: 'Marks' },
+          type: 'image',
+          src: jessEmblemsImg,
+          fit: 'cover',
+          bg: '#11162c',
+        },
+        {
+          id: 'jess-banners',
+          title: { ru: 'Пакет обложек и меню', en: 'Covers & UI Pack' },
+          tag: { ru: 'Оформление', en: 'GFX Pack' },
+          type: 'image',
+          src: jessBannersImg,
+          fit: 'contain',
+          bg: '#11152c',
+        },
+        {
+          id: 'jess-win',
+          title: { ru: 'Анимация «Победа»', en: 'Win Motion' },
+          tag: { ru: 'VFX / Моушн', en: 'VFX / Motion' },
+          type: 'video',
+          src: jessWinVideo,
+          fit: 'cover',
+          bg: '#06080f',
+        },
+        {
+          id: 'jess-draw',
+          title: { ru: 'Анимация «Ничья»', en: 'Draw Motion' },
+          tag: { ru: 'VFX / Моушн', en: 'VFX / Motion' },
+          type: 'video',
+          src: jessDrawVideo,
+          fit: 'cover',
+          bg: '#06080f',
+        },
+        {
+          id: 'jess-lose',
+          title: { ru: 'Анимация «Поражение»', en: 'Defeat Motion' },
+          tag: { ru: 'VFX / Моушн', en: 'VFX / Motion' },
+          type: 'video',
+          src: jessLoseVideo,
+          fit: 'cover',
+          bg: '#06080f',
+        },
+      ],
+    },
+    {
+      id: 'bull',
+      number: '02',
+      title: 'BULL',
+      subtitle: {
+        ru: 'Фирменный логотип, визуальная айдентика и мерч',
+        en: 'Brand logo mark, visual identity & merch',
+      },
+      year: '2026',
+      homeCoverIndex: 0,
+      items: [
+        {
+          id: 'bull-flame',
+          title: { ru: 'Основной логотип', en: 'Primary Logo' },
+          tag: { ru: 'Брендинг', en: 'Branding' },
+          type: 'image',
+          src: bullFlameImg,
+          fit: 'contain',
+          bg: '#161113',
+        },
+        {
+          id: 'bull-mark',
+          title: { ru: 'Фирменный знак', en: 'Brand Mark' },
+          tag: { ru: 'Логотип', en: 'Logo' },
+          type: 'image',
+          src: bullMarkImg,
+          fit: 'contain',
+          bg: '#141414',
+        },
+        {
+          id: 'bull-merch',
+          title: { ru: 'Фартук и футболка', en: 'Apron & Tee' },
+          tag: { ru: 'Мерч', en: 'Merch' },
+          type: 'image',
+          src: bullMerchImg,
+          fit: 'cover',
+          bg: '#17120e',
+        },
+        {
+          id: 'bull-wood',
+          title: { ru: 'Носитель на дереве', en: 'Wood Application' },
+          tag: { ru: 'Айдентика', en: 'Identity' },
+          type: 'image',
+          src: bullWoodImg,
+          fit: 'cover',
+          bg: '#1f160d',
+        },
+      ],
+    },
+    {
+      id: 'almat-brat',
+      number: '03',
+      title: 'ALMAT BRAT',
+      subtitle: {
+        ru: 'Персональный бренд, логотип-портрет и фирменная палитра',
+        en: 'Personal brand, mascot portrait logo & color palette',
+      },
+      year: '2026',
+      homeCoverIndex: 0,
+      items: [
+        {
+          id: 'almat-dark',
+          title: { ru: 'Тёмная версия', en: 'Dark Version' },
+          tag: { ru: 'Логотип', en: 'Logo' },
+          type: 'image',
+          src: almatDarkImg,
+          fit: 'cover',
+          bg: '#040a09',
+        },
+        {
+          id: 'almat-light',
+          title: { ru: 'Версия на градиенте', en: 'Gradient Version' },
+          tag: { ru: 'Айдентика', en: 'Identity' },
+          type: 'image',
+          src: almatLightImg,
+          fit: 'cover',
+          bg: '#38f6be',
+        },
+        {
+          id: 'almat-palette',
+          title: { ru: 'Фирменная палитра', en: 'Color Palette' },
+          tag: { ru: 'Цвета', en: 'Palette' },
+          type: 'image',
+          src: almatPaletteImg,
+          fit: 'cover',
+          bg: '#040908',
+        },
+      ],
+    },
+  ] as PortfolioCase[],
   contacts: [
-    {number:'01',key:'channel',title:{ru:'Telegram-канал',en:'Telegram channel'},description:{ru:'Работы, процесс и новости',en:'Work, process and updates'},username:'@karimdsg',url:'https://t.me/karimdsg',icon:'◉'},
-    {number:'02',key:'designer',title:{ru:'Написать в ЛС',en:'Message me'},description:{ru:'Обсудить заказ, цену и сроки',en:'Discuss your brief, budget and timeline'},username:'@karim_the_drea4',url:'https://t.me/karim_the_drea4',icon:'↗'},
-    {number:'03',key:'source',title:{ru:'SOURCE',en:'SOURCE'},description:{ru:'Перейти в SOURCE',en:'Go to SOURCE'},username:'@karim_the_drea4',url:'https://t.me/karim_the_drea4',icon:'✳'},
-  ],
-  steps: [
-    {title:{ru:'Выбор',en:'Choose'},body:{ru:'Отметьте нужные услуги',en:'Select the services you need'}},
-    {title:{ru:'Диалог',en:'Discuss'},body:{ru:'Уточняем задачу, цену и срок',en:'Confirm scope, price and timing'}},
-    {title:{ru:'Оплата',en:'Payment'},body:{ru:'Работа стартует после оплаты',en:'Work begins after payment'}},
-    {title:{ru:'Результат',en:'Delivery'},body:{ru:'Правки по заданию, затем файлы',en:'Revisions, then final files'}},
-  ],
+    {
+      number: '01',
+      key: 'channel',
+      title: { ru: 'Telegram-канал', en: 'Telegram channel' },
+      description: {
+        ru: 'Работы, блог, посты и новости',
+        en: 'Work, blog, posts and updates',
+      },
+      username: '@karimdsg',
+      copyText: '@karimdsg',
+      url: 'https://t.me/karimdsg',
+      avatar: avatarChannelImg,
+    },
+    {
+      number: '02',
+      key: 'manager',
+      title: { ru: 'Написать в ЛС', en: 'Message us' },
+      description: {
+        ru: 'Получить бесплатную консультацию',
+        en: 'Get a free consultation',
+      },
+      username: '@Karim_managerr',
+      url: 'https://t.me/Karim_managerr',
+      avatar: avatarDmImg,
+      prompt: {
+        ru: 'Здравствуйте! Хочу получить бесплатную консультацию по проекту.',
+        en: 'Hello! I would like to get a free consultation for my project.',
+      },
+    },
+    {
+      number: '03',
+      key: 'community',
+      title: { ru: 'KARIM COMMUNITY', en: 'KARIM COMMUNITY' },
+      description: {
+        ru: 'Вступить в KARIM COMMUNITY',
+        en: 'Join KARIM COMMUNITY',
+      },
+      username: 't.me/Karimdsg/3375',
+      url: 'https://t.me/Karimdsg/3375',
+      avatar: avatarCommunityImg,
+    },
+  ] as ContactItem[],
   interface: {
-    ru:{nav:['Главная','Услуги','Работы','Связь'],open:'Открыт для заказов',designer:'ДИЗАЙНЕР',hero:'Оформление для каналов, студий и проектов',heroSub:'Аватарки, баннеры, арты и анимации. Цену и срок называю до начала работы.',choose:'Выбрать услуги',works:'Работы',message:'Написать в ЛС',latest:'Последние работы',allWorks:'Все работы',benefits:'Почему со мной',experience:'Больше 3-х лет опыта',orders:'Более тысячи закрытых заказов',formats:'Работаю в любом формате',time:'Сроки',timeSub:'Называю до начала работы',volume:'Скидка за объём',volumeSub:'до −35% от 10 работ',myTime:'Моё время',steps:'Как проходит заказ',openSource:'Открыть SOURCE',prices:'Услуги и цены',pricesSub:'Цены средние, итог зависит от ТЗ. Согласуем до начала работы.',discountLabel:'Скидка за объём',from:'от',items:'работ',rush:'Вне очереди +50%',rushSub:'Сроки обсуждаем в ЛС.',portfolio:'Работы',portfolioSub:'Нажмите на работу, чтобы открыть её.',all:'Все',avatars:'Аватарки',banners:'Баннеры',arts:'Арты',favorites:'Избранное',search:'Поиск по названию',contact:'Связь',soon:'Скоро здесь',developing:'В РАЗРАБОТКЕ',cart:'Заказ',empty:'Пока пусто',emptySub:'Добавьте услуги — расчёт появится здесь.',subtotal:'Сумма без скидки',discount:'Скидка',surcharge:'Срочность',total:'Итого',custom:'+ позиции по договорённости в ЛС',comment:'Комментарий или ссылка на канал',commentPlaceholder:'Например: нужен баннер для канала…',order:'Оформить заказ в ЛС',added:'Добавлено в избранное',removed:'Удалено из избранного',similar:'Заказать похожее',addFavorite:'В избранное',close:'Закрыть',perItem:'за позицию',onBrief:'по ТЗ',serviceAdd:'В заказ',copied:'Юзернейм скопирован',opened:'Ссылка открыта',work:'РАБОТА',selection:'ИЗБРАННОЕ',process:'Бриф',draft:'Черновик',revisions:'Правки',final:'Финал',slots:'Свободно мест',slotsValue:'2 из 5',featured:'Избранная работа',studioTag:'[ SOURCE ]',allCount:'Все',list:'Список',grid:'Сетка',large:'Крупно',shuffle:'Перемешать',soonPlatforms:['TikTok','Instagram','YouTube'],noResults:'Ничего не найдено',quote:'Цена в ЛС'},
-    en:{nav:['Home','Services','Work','Contact'],open:'Available for projects',designer:'DESIGNER',hero:'Design for channels, studios & projects',heroSub:'Avatars, banners, art and motion. Price and timeline are agreed before we start.',choose:'Explore services',works:'Selected work',message:'Message me',latest:'Latest work',allWorks:'View all work',benefits:'Why work with me',experience:'3+ years of experience',orders:'1,000+ completed orders',formats:'Flexible formats, one partner',time:'Timeline',timeSub:'Confirmed before we start',volume:'Volume discount',volumeSub:'up to −35% from 10 items',myTime:'My time',steps:'How it works',openSource:'Explore SOURCE',prices:'Services & pricing',pricesSub:'Prices are indicative and depend on the brief. We agree before work begins.',discountLabel:'Volume discount',from:'from',items:'items',rush:'Rush order +50%',rushSub:'Timeline agreed in DMs.',portfolio:'Selected work',portfolioSub:'Select a project to view details.',all:'All',avatars:'Avatars',banners:'Banners',arts:'Art',favorites:'Favorites',search:'Search by title',contact:'Contact',soon:'Coming soon',developing:'IN DEVELOPMENT',cart:'Order',empty:'Your order is empty',emptySub:'Add a service to see your estimate.',subtotal:'Subtotal',discount:'Discount',surcharge:'Rush fee',total:'Total',custom:'+ custom items to be quoted in DMs',comment:'Note or channel link',commentPlaceholder:'For example: a banner for my channel…',order:'Place order in DMs',added:'Added to favorites',removed:'Removed from favorites',similar:'Order something similar',addFavorite:'Save to favorites',close:'Close',perItem:'per item',onBrief:'brief dependent',serviceAdd:'Add to order',copied:'Username copied',opened:'Link opened',work:'PROJECT',selection:'FEATURED',process:'Brief',draft:'Draft',revisions:'Revisions',final:'Final',slots:'Slots available',slotsValue:'2 of 5',featured:'Featured work',studioTag:'[ SOURCE ]',allCount:'All',list:'List',grid:'Grid',large:'Large',shuffle:'Shuffle',soonPlatforms:['TikTok','Instagram','YouTube'],noResults:'No results found',quote:'Quote in DMs'}
-  } as Record<Language,Record<string,any>>
+    ru: {
+      nav: ['Главная', 'Услуги', 'Работы', 'Связь'],
+      designer: 'ДИЗАЙНЕР',
+      hero: 'Фирменный стиль, канал под ключ, индивидуальный подход к каждому проекту',
+      heroSub:
+        'Разработка логотипов, брендинг, канал под ключ, статичные оформления, анимации, эмодзи и т.д.',
+      choose: 'Выбрать услуги',
+      works: 'Работы',
+      message: 'Написать в ЛС',
+      latest: 'Последние работы',
+      seeAll: 'Смотреть всё',
+      myTime: 'Моё время',
+      joinCommunity: 'Вступить',
+      prices: 'Услуги',
+      pricesSub: 'Стоимость зависит от объёма задачи.',
+      consultation: 'Консультация',
+      portfolio: 'Работы',
+      portfolioSub:
+        'Каждый кейс собран отдельной линией. Нажмите на любую работу, чтобы рассмотреть детали.',
+      discussCase: 'Обсудить кейс',
+      contact: 'Связь',
+      contactSub:
+        'Выберите удобный канал — обсудим задачу, покажем процессы или подключим к комьюнити.',
+      similar: 'Заказать похожее',
+      close: 'Закрыть',
+      copied: 'Юзернейм скопирован',
+      opened: 'Открываю Telegram',
+      promptCopied: 'Сообщение готово — открываю Telegram',
+      generalConsultPrompt:
+        'Здравствуйте! Хочу получить бесплатную консультацию по проекту.',
+      featured: 'Избранный кейс',
+      featuredMeta: 'АЙДЕНТИКА & VFX / 2026',
+    },
+    en: {
+      nav: ['Home', 'Services', 'Work', 'Contact'],
+      designer: 'DESIGNER',
+      hero: 'Brand identity, turnkey channel design & tailored approach to every project',
+      heroSub:
+        'Logo design, branding, turnkey channels, static visuals, animations, custom emoji and more.',
+      choose: 'Explore services',
+      works: 'Selected work',
+      message: 'Message us',
+      latest: 'Latest work',
+      seeAll: 'View all cases',
+      myTime: 'My time',
+      joinCommunity: 'Join',
+      prices: 'Services',
+      pricesSub: 'Pricing depends on project scope.',
+      consultation: 'Consultation',
+      portfolio: 'Selected work',
+      portfolioSub:
+        'Each case is presented as its own collection line. Tap any piece to view full details.',
+      discussCase: 'Discuss case',
+      contact: 'Contact',
+      contactSub:
+        'Pick a channel — discuss your brief, follow our work, or join the community.',
+      similar: 'Order something similar',
+      close: 'Close',
+      copied: 'Username copied',
+      opened: 'Opening Telegram',
+      promptCopied: 'Message ready — opening Telegram',
+      generalConsultPrompt:
+        'Hello! I would like to get a free consultation for my project.',
+      featured: 'Featured case',
+      featuredMeta: 'IDENTITY & VFX / 2026',
+    },
+  },
 };
