@@ -62,13 +62,14 @@ export function CaseLightbox({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
+      transition={{ duration: 0.16 }}
       onClick={onClose}
     >
       <motion.div
         className="sheet detail-sheet lightbox-sheet"
-        initial={{ y: 36, scale: 0.97, opacity: 0 }}
-        animate={{ y: 0, scale: 1, opacity: 1 }}
-        exit={{ y: 24, scale: 0.97, opacity: 0 }}
+        initial={{ y: 20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        exit={{ y: 14, opacity: 0 }}
         transition={springTransition}
         role="dialog"
         aria-modal="true"
@@ -96,6 +97,7 @@ export function CaseLightbox({
                   key={active.id}
                   className="lightbox-media"
                   src={active.src}
+                  poster={active.poster}
                   autoPlay
                   loop
                   muted={muted}
@@ -169,7 +171,11 @@ export function CaseLightbox({
                 >
                   {media.type === 'video' ? (
                     <span className="thumb-video">
-                      <video src={media.src} muted playsInline preload="metadata" />
+                      {media.poster ? (
+                        <img src={media.poster} alt={media.title[lang]} loading="lazy" />
+                      ) : (
+                        <video src={media.src} muted playsInline preload="none" />
+                      )}
                       <i aria-hidden="true">
                         <Play size={10} fill="currentColor" />
                       </i>

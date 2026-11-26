@@ -8,12 +8,16 @@ import avatarCommunityImg from '../assets/avatar-community.jpg';
 
 // Case 01 — JESS (Featured)
 import jessSupportVideo from '../assets/cases/jess/support-motion.mp4';
+import jessSupportPoster from '../assets/cases/jess/support-poster.jpg';
 import jessMascotImg from '../assets/cases/jess/mascot-pattern.jpg';
 import jessEmblemsImg from '../assets/cases/jess/emblems.jpg';
 import jessBannersImg from '../assets/cases/jess/banners-pack.jpg';
 import jessWinVideo from '../assets/cases/jess/win-motion.mp4';
+import jessWinPoster from '../assets/cases/jess/win-poster.jpg';
 import jessDrawVideo from '../assets/cases/jess/draw-motion.mp4';
+import jessDrawPoster from '../assets/cases/jess/draw-poster.jpg';
 import jessLoseVideo from '../assets/cases/jess/lose-motion.mp4';
+import jessLosePoster from '../assets/cases/jess/lose-poster.jpg';
 
 // Case 02 — BULL
 import bullFlameImg from '../assets/cases/bull/logo-flame.jpg';
@@ -42,6 +46,7 @@ export type MediaItem = {
   tag: Record<Language, string>;
   type: 'image' | 'video';
   src: string;
+  poster?: string;
   fit?: 'cover' | 'contain';
   bg?: string;
 };
@@ -172,6 +177,7 @@ export const config = {
           tag: { ru: 'VFX / Анимация', en: 'VFX / Motion' },
           type: 'video',
           src: jessSupportVideo,
+          poster: jessSupportPoster,
           fit: 'contain',
           bg: '#05060b',
         },
@@ -208,6 +214,7 @@ export const config = {
           tag: { ru: 'VFX / Моушн', en: 'VFX / Motion' },
           type: 'video',
           src: jessWinVideo,
+          poster: jessWinPoster,
           fit: 'cover',
           bg: '#06080f',
         },
@@ -217,6 +224,7 @@ export const config = {
           tag: { ru: 'VFX / Моушн', en: 'VFX / Motion' },
           type: 'video',
           src: jessDrawVideo,
+          poster: jessDrawPoster,
           fit: 'cover',
           bg: '#06080f',
         },
@@ -226,6 +234,7 @@ export const config = {
           tag: { ru: 'VFX / Моушн', en: 'VFX / Motion' },
           type: 'video',
           src: jessLoseVideo,
+          poster: jessLosePoster,
           fit: 'cover',
           bg: '#06080f',
         },

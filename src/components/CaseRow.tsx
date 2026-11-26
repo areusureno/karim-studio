@@ -1,9 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { motion } from 'framer-motion';
 import { ArrowUpRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { Language, PortfolioCase } from '../data/content';
 import CaseMedia from './CaseMedia';
-import { springTransition } from './SurfaceCard';
 import { haptic } from '../utils/telegram';
 
 type CaseRowProps = {
@@ -112,11 +110,9 @@ export function CaseRow({
 
       <div ref={trackRef} className={`case-strip ${gridVariant}`}>
         {itemCase.items.map((media, idx) => (
-          <motion.button
+          <button
             type="button"
             key={media.id}
-            whileHover={{ y: -4 }}
-            transition={springTransition}
             className="case-card"
             onClick={() => onOpenItem(itemCase, idx)}
           >
@@ -124,7 +120,7 @@ export function CaseRow({
               <CaseMedia
                 item={media}
                 alt={`${itemCase.title} — ${media.title[lang]}`}
-                priority={itemCase.featured && idx < 2}
+                priority={itemCase.featured && idx < 4}
               />
               <span className="art-open" aria-hidden="true">
                 <ArrowUpRight size={15} />
@@ -134,7 +130,7 @@ export function CaseRow({
               <b>{media.title[lang]}</b>
               <span>{media.tag[lang]}</span>
             </div>
-          </motion.button>
+          </button>
         ))}
       </div>
     </section>

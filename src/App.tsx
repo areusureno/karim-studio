@@ -12,7 +12,7 @@ import CaseMedia from './components/CaseMedia';
 import CaseRow from './components/CaseRow';
 import LiveClock from './components/LiveClock';
 import ServiceIcon from './components/ServiceIcon';
-import SurfaceCard, { applySpotlight, springTransition } from './components/SurfaceCard';
+import SurfaceCard from './components/SurfaceCard';
 import logo from './assets/k-logo.png';
 import {
   haptic,
@@ -275,7 +275,7 @@ function App() {
           targetHash || window.location.pathname + window.location.search
         );
       }
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      window.scrollTo({ top: 0, behavior: 'auto' });
     }
   }, []);
 
@@ -408,6 +408,7 @@ function App() {
               item={featuredHeroMedia}
               alt={`${featuredCase.title} — ${featuredHeroMedia.title[lang]}`}
               priority
+              autoplayVideo
             />
             <span className="feature-open" aria-hidden="true">
               <ArrowUpRight size={17} />
@@ -446,11 +447,9 @@ function App() {
             const coverIdx = itemCase.homeCoverIndex ?? 0;
             const cover = itemCase.items[coverIdx] ?? itemCase.items[0];
             return (
-              <motion.button
+              <button
                 type="button"
                 key={itemCase.id}
-                whileHover={{ y: -4 }}
-                transition={springTransition}
                 className="home-case-card"
                 onClick={() => openLightbox(itemCase, 0)}
               >
@@ -474,7 +473,7 @@ function App() {
                   </span>
                 </div>
                 <p className="home-case-sub">{itemCase.subtitle[lang]}</p>
-              </motion.button>
+              </button>
             );
           })}
         </div>
@@ -573,12 +572,9 @@ function App() {
       <PageHeading eyebrow={micro.contact} title={t.contact} subtitle={t.contactSub} />
       <div className="contact-list">
         {config.contacts.map((item) => (
-          <motion.button
+          <button
             type="button"
-            whileHover={{ x: 5 }}
-            transition={springTransition}
-            className="contact-card surface spotlight"
-            onMouseMove={applySpotlight}
+            className="contact-card surface"
             key={item.key}
             onClick={() => {
               if (item.prompt) {
@@ -598,7 +594,7 @@ function App() {
             </span>
             <span className="contact-user">{item.username}</span>
             <ArrowUpRight className="contact-arrow" size={18} />
-          </motion.button>
+          </button>
         ))}
       </div>
     </>
@@ -608,9 +604,6 @@ function App() {
 
   return (
     <div className="app-shell">
-      <div className="ambient ambient-one" />
-      <div className="ambient ambient-two" />
-
       <TopHeader
         lang={lang}
         tab={tab}
@@ -623,24 +616,15 @@ function App() {
       />
 
       <main className="page-wrap">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={tab}
-            className="page-content"
-            initial={{ opacity: 0, y: 9 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
-            transition={{ duration: 0.22 }}
-          >
-            {tab === 'home'
-              ? renderHome()
-              : tab === 'services'
-                ? renderServices()
-                : tab === 'portfolio'
-                  ? renderPortfolio()
-                  : renderContact()}
-          </motion.div>
-        </AnimatePresence>
+        <div key={tab} className="page-content">
+          {tab === 'home'
+            ? renderHome()
+            : tab === 'services'
+              ? renderServices()
+              : tab === 'portfolio'
+                ? renderPortfolio()
+                : renderContact()}
+        </div>
 
         <footer className="site-footer">
           <span>© KARIM STUDIO — 2026</span>
@@ -676,6 +660,7 @@ function App() {
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 10 }}
+            transition={{ duration: 0.16 }}
           >
             <CheckCircle2 size={16} />
             {toast}
