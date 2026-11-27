@@ -89,6 +89,8 @@ export const config = {
     channel: 'https://t.me/karimdsg',
     channelHandle: '@karimdsg',
     community: 'https://t.me/Karimdsg/3375',
+    casesChannel: 'https://t.me/KarimCases',
+    casesChannelHandle: '@KarimCases',
     portfolio: '#portfolio',
   },
   services: [
@@ -393,6 +395,7 @@ export const config = {
       portfolio: 'Работы',
       portfolioSub:
         'Каждый кейс собран отдельной линией. Нажмите на любую работу, чтобы рассмотреть детали.',
+      viewAllCasesChannel: 'Смотреть все',
       discussCase: 'Обсудить кейс',
       contact: 'Связь',
       contactSub:
@@ -426,6 +429,7 @@ export const config = {
       portfolio: 'Selected work',
       portfolioSub:
         'Each case is presented as its own collection line. Tap any piece to view full details.',
+      viewAllCasesChannel: 'View all',
       discussCase: 'Discuss case',
       contact: 'Contact',
       contactSub:

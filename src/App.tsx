@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { type ReactNode, useCallback, useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowRight, ArrowUpRight, CheckCircle2, Send } from 'lucide-react';
 import {
@@ -25,7 +25,54 @@ type Tab = 'home' | 'services' | 'portfolio' | 'contact';
 type LightboxState = { itemCase: PortfolioCase; index: number } | null;
 
 const TABS: Tab[] = ['home', 'services', 'portfolio', 'contact'];
-const NAV_ICONS = ['⌂', '✳', '▧', '↗'];
+
+function NavGlyph({ tab }: { tab: Tab }) {
+  if (tab === 'home') {
+    return (
+      <svg viewBox="0 0 16 16" width="14" height="14" fill="none" aria-hidden="true">
+        <path
+          d="M2.5 7.2 8 2.6l5.5 4.6v5.7a.6.6 0 0 1-.6.6H3.1a.6.6 0 0 1-.6-.6V7.2Z"
+          stroke="currentColor"
+          strokeWidth="1.35"
+          strokeLinejoin="round"
+        />
+      </svg>
+    );
+  }
+  if (tab === 'services') {
+    return (
+      <svg viewBox="0 0 16 16" width="14" height="14" fill="none" aria-hidden="true">
+        <path
+          d="M8 2v12M2 8h12M3.76 3.76l8.48 8.48M12.24 3.76l-8.48 8.48"
+          stroke="currentColor"
+          strokeWidth="1.35"
+          strokeLinecap="round"
+        />
+      </svg>
+    );
+  }
+  if (tab === 'portfolio') {
+    return (
+      <svg viewBox="0 0 16 16" width="14" height="14" fill="none" aria-hidden="true">
+        <rect x="2.5" y="2.5" width="4.4" height="4.4" rx="1" stroke="currentColor" strokeWidth="1.3" />
+        <rect x="9.1" y="2.5" width="4.4" height="4.4" rx="1" stroke="currentColor" strokeWidth="1.3" />
+        <rect x="2.5" y="9.1" width="4.4" height="4.4" rx="1" stroke="currentColor" strokeWidth="1.3" />
+        <rect x="9.1" y="9.1" width="4.4" height="4.4" rx="1" stroke="currentColor" strokeWidth="1.3" />
+      </svg>
+    );
+  }
+  return (
+    <svg viewBox="0 0 16 16" width="14" height="14" fill="none" aria-hidden="true">
+      <path
+        d="M4.5 11.5 11.5 4.5M6 4.5h5.5V10"
+        stroke="currentColor"
+        strokeWidth="1.35"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
 
 function parseTabFromHash(): Tab {
   if (typeof window === 'undefined') return 'home';
@@ -88,7 +135,9 @@ function TopHeader({ lang, tab, navLabels, onGo, onLangChange }: HeaderProps) {
             className={`nav-item ${tab === name ? 'active' : ''}`}
             onClick={() => onGo(name)}
           >
-            <span className="nav-glyph">{NAV_ICONS[i]}</span>
+            <span className="nav-glyph">
+              <NavGlyph tab={name} />
+            </span>
             <span>{navLabels[i]}</span>
           </button>
         ))}
@@ -137,7 +186,9 @@ function MobileDock({ lang, tab, navLabels, onGo }: MobileDockProps) {
           className={`nav-item ${tab === name ? 'active' : ''}`}
           onClick={() => onGo(name)}
         >
-          <span className="nav-glyph">{NAV_ICONS[i]}</span>
+          <span className="nav-glyph">
+            <NavGlyph tab={name} />
+          </span>
           <span>{navLabels[i]}</span>
         </button>
       ))}
@@ -149,16 +200,23 @@ function PageHeading({
   eyebrow,
   title,
   subtitle,
+  action,
 }: {
   eyebrow: string;
   title: string;
   subtitle: string;
+  action?: ReactNode;
 }) {
   return (
     <header className="page-heading">
-      <span className="eyebrow">{eyebrow}</span>
-      <h1>{title}</h1>
-      <p>{subtitle}</p>
+      <div className="page-heading-row">
+        <div>
+          <span className="eyebrow">{eyebrow}</span>
+          <h1>{title}</h1>
+          <p>{subtitle}</p>
+        </div>
+        {action && <div className="page-heading-action">{action}</div>}
+      </div>
     </header>
   );
 }
@@ -550,7 +608,21 @@ function App() {
 
   const renderPortfolio = () => (
     <>
-      <PageHeading eyebrow={micro.projects} title={t.portfolio} subtitle={t.portfolioSub} />
+      <PageHeading
+        eyebrow={micro.projects}
+        title={t.portfolio}
+        subtitle={t.portfolioSub}
+        action={
+          <button
+            type="button"
+            className="btn btn-glass"
+            onClick={() => openDirectTelegram(config.links.casesChannel)}
+          >
+            <span>{t.viewAllCasesChannel}</span>
+            <ArrowUpRight size={15} />
+          </button>
+        }
+      />
       <div className="cases-stack">
         {cases.map((itemCase) => (
           <CaseRow
@@ -563,6 +635,16 @@ function App() {
             onDiscussCase={(c) => openCaseConsult(c)}
           />
         ))}
+      </div>
+      <div className="see-all-wrap portfolio-see-all">
+        <button
+          type="button"
+          className="btn btn-glass see-all-btn"
+          onClick={() => openDirectTelegram(config.links.casesChannel)}
+        >
+          <span>{t.viewAllCasesChannel}</span>
+          <ArrowUpRight size={16} />
+        </button>
       </div>
     </>
   );

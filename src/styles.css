@@ -182,7 +182,9 @@ button:disabled {
 }
 
 .nav-glyph {
-  font-size: 15px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   line-height: 1;
 }
 
@@ -983,6 +985,22 @@ button:disabled {
 /* ===== Sub-page Headings ===== */
 .page-heading {
   padding: 40px 0 28px;
+}
+
+.page-heading-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+.page-heading-action {
+  flex-shrink: 0;
+}
+
+.portfolio-see-all {
+  margin-top: 42px;
 }
 
 .page-heading h1 {
@@ -1903,8 +1921,9 @@ button:disabled {
   }
 
   .dock .nav-glyph {
-    display: block;
-    font-size: 15px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .dock .nav-item.active {
